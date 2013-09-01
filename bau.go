@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "regexp"
+  "strings"
   "net/http"
   "io/ioutil"
   "os"
@@ -21,32 +22,55 @@ func find() (pictures []string) {
   return re.FindAllString(get("http://www.flickr.com/search/?l=commderiv&q=pug"), -1)
 }
 
-func get(url string) (body string) {
-  response, err := http.Get(url)
-
-  if err != nil {
-    fmt.Printf("%s", err)
-    os.Exit(1)
-  } else {
-    defer response.Body.Close()
-    contents, err := ioutil.ReadAll(response.Body)
-
-    if err != nil {
-      fmt.Printf("%s", err)
-      os.Exit(1)
-    }
-
-    body = string(contents)
-  }
-
-  return body
-}
-
 /*********************************************************/
 /* PERSIST functions                                     */
 /*********************************************************/
 func persist(pictures []string) {
   for i := 0; i < len(pictures); i++ {
-    fmt.Println(pictures[i])
+    writeFile(pictures[i])
+  }
+}
+
+func writeFile(picture string) {
+  dirname := "tmp"
+  os.Mkdir(dirname, 0700)
+
+  file, err := os.Create(filePath(picture, dirname))
+  handleError(err)
+
+  defer file.Close()
+
+  file.WriteString(get(picture))
+}
+
+func filePath(picture string, dirname string) (filePath string) {
+  return dirname + "/" + filename(picture)
+}
+
+func filename(picture string) (filename string) {
+  tokens := strings.Split(picture, "/")
+  return tokens[len(tokens) - 1]
+}
+
+/*********************************************************/
+/* GENERAL functions                                     */
+/*********************************************************/
+
+func get(url string) (body string) {
+  response, err := http.Get(url)
+  handleError(err)
+
+  defer response.Body.Close()
+  contents, err := ioutil.ReadAll(response.Body)
+
+  handleError(err)
+
+  return string(contents)
+}
+
+func handleError(err error) {
+  if err != nil {
+    fmt.Printf("%s", err)
+    os.Exit(1)
   }
 }
